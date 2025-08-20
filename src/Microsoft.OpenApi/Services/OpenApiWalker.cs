@@ -154,16 +154,17 @@ namespace Microsoft.OpenApi
 
             _visitor.Visit(components);
 
-            WalkDictionary(OpenApiConstants.Schemas, components.Schemas, Walk, isComponent: true);
-            WalkDictionary(OpenApiConstants.SecuritySchemes, components.SecuritySchemes, Walk, isComponent: true);
-            WalkDictionary(OpenApiConstants.Callbacks, components.Callbacks, Walk, isComponent: true);
-            WalkDictionary(OpenApiConstants.PathItems, components.PathItems, Walk, isComponent: true);
-            WalkDictionary(OpenApiConstants.Parameters, components.Parameters, Walk, isComponent: true);
-            WalkDictionary(OpenApiConstants.Examples, components.Examples, Walk, isComponent: true);
-            WalkDictionary(OpenApiConstants.Headers, components.Headers, Walk, isComponent: true);
-            WalkDictionary(OpenApiConstants.Links, components.Links, Walk, isComponent: true);
-            WalkDictionary(OpenApiConstants.RequestBodies, components.RequestBodies, Walk, isComponent: true);
-            WalkDictionary(OpenApiConstants.Responses, components.Responses, Walk, isComponent: true);
+            var isComponent = true;
+            WalkDictionary(OpenApiConstants.Schemas, components.Schemas, Walk, isComponent);
+            WalkDictionary(OpenApiConstants.SecuritySchemes, components.SecuritySchemes, Walk, isComponent);
+            WalkDictionary(OpenApiConstants.Callbacks, components.Callbacks, Walk, isComponent);
+            WalkDictionary(OpenApiConstants.PathItems, components.PathItems, Walk, isComponent);
+            WalkDictionary(OpenApiConstants.Parameters, components.Parameters, Walk, isComponent);
+            WalkDictionary(OpenApiConstants.Examples, components.Examples, Walk, isComponent);
+            WalkDictionary(OpenApiConstants.Headers, components.Headers, Walk, isComponent);
+            WalkDictionary(OpenApiConstants.Links, components.Links, Walk, isComponent);
+            WalkDictionary(OpenApiConstants.RequestBodies, components.RequestBodies, Walk, isComponent);
+            WalkDictionary(OpenApiConstants.Responses, components.Responses, Walk, isComponent);
 
             Walk(components as IOpenApiExtensible);
         }
