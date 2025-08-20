@@ -1,7 +1,10 @@
 ﻿using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Diagnosers;
 using Microsoft.OpenApi;
 
 namespace performance;
+
+[EventPipeProfiler(EventPipeProfile.CpuSampling)]
 [MemoryDiagnoser]
 [JsonExporter]
 [ShortRunJob]

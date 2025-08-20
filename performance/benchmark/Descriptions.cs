@@ -5,11 +5,13 @@ using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Diagnosers;
 using Microsoft.OpenApi;
 using Microsoft.OpenApi.Reader;
 
 namespace performance;
 
+[EventPipeProfiler(EventPipeProfile.CpuSampling)]
 [MemoryDiagnoser]
 [JsonExporter]
 [ShortRunJob]
