@@ -42,14 +42,43 @@ namespace Microsoft.OpenApi
 
             _visitor.Visit(doc);
 
-            WalkItem(OpenApiConstants.Info, doc.Info, Walk);
-            WalkItem(OpenApiConstants.Servers, doc.Servers, Walk);
-            WalkItem(OpenApiConstants.Paths, doc.Paths, Walk);
+            if (doc.Info is { } info)
+            {
+                WalkItem(OpenApiConstants.Info, doc.Info, Walk);
+            }
+
+            if (doc.Servers is { } servers)
+            {
+                WalkItem(OpenApiConstants.Servers, servers, Walk);
+            }
+
+            if (doc.Paths is { } paths)
+            {
+                WalkItem(OpenApiConstants.Paths, doc.Paths, Walk);
+            }
+            
             WalkDictionary(OpenApiConstants.Webhooks, doc.Webhooks, Walk);
-            WalkItem(OpenApiConstants.Components, doc.Components, Walk);
-            WalkItem(OpenApiConstants.Security, doc.Security, Walk);
-            WalkItem(OpenApiConstants.ExternalDocs, doc.ExternalDocs, Walk);
-            WalkItem(OpenApiConstants.Tags, doc.Tags, Walk);
+
+            if (doc.Components is { } components)
+            {
+                WalkItem(OpenApiConstants.Components, components, Walk);
+            }
+
+            if (doc.Security is { } security)
+            {
+                WalkItem(OpenApiConstants.Security, security, Walk);
+            }
+
+            if (doc.ExternalDocs is { } externalDocs)
+            {
+                WalkItem(OpenApiConstants.ExternalDocs, externalDocs, Walk);
+            }
+
+            if (doc.Tags is { } tags)
+            {
+                WalkItem(OpenApiConstants.Tags, tags, Walk);
+            }
+
             Walk(doc as IOpenApiExtensible);
         }
 
@@ -66,21 +95,23 @@ namespace Microsoft.OpenApi
             _visitor.Visit(tags);
 
             // Visit tags
-            if (tags != null)
+            if (tags is HashSet<OpenApiTag> { Count: 1 } hashSet && hashSet.First() is { } only)
             {
-                if (tags is HashSet<OpenApiTag> { Count: 1 } hashSet)
+                WalkItem("0", only, Walk);
+            }
+            else
+            {
+                int index = 0;
+                foreach (var tag in tags)
                 {
-                    WalkItem("0", hashSet.First(), Walk);
-                }
-                else
-                {
-                    int index = 0;
-                    foreach (var tag in tags)
+                    if (tag is null)
                     {
-                        var context = index.ToString();
-                        WalkItem(context, tag, Walk);
-                        index++;
+                        continue;
                     }
+
+                    var context = index.ToString();
+                    WalkItem(context, tag, Walk);
+                    index++;
                 }
             }
         }
@@ -98,21 +129,23 @@ namespace Microsoft.OpenApi
             _visitor.Visit(tags);
 
             // Visit tags
-            if (tags != null)
+            if (tags is HashSet<OpenApiTagReference> { Count: 1 } hashSet && hashSet.First() is { } only)
             {
-                if (tags is HashSet<OpenApiTagReference> { Count: 1 } hashSet)
+                WalkItem("0", only, Walk);
+            }
+            else
+            {
+                int index = 0;
+                foreach (var tag in tags)
                 {
-                    WalkItem("0", hashSet.First(), Walk);
-                }
-                else
-                {
-                    int index = 0;
-                    foreach (var tag in tags)
+                    if (tag is null)
                     {
-                        var context = index.ToString();
-                        WalkItem(context, tag, Walk);
-                        index++;
+                        continue;
                     }
+
+                    var context = index.ToString();
+                    WalkItem(context, tag, Walk);
+                    index++;
                 }
             }
         }
@@ -182,14 +215,16 @@ namespace Microsoft.OpenApi
             _visitor.Visit(paths);
 
             // Visit Paths
-            if (paths != null)
+            foreach (var pathItem in paths)
             {
-                foreach (var pathItem in paths)
+                if (pathItem.Value is null)
                 {
-                    _visitor.CurrentKeys.Path = pathItem.Key;
-                    WalkItem(pathItem.Key, pathItem.Value, Walk, isComponent: false);// JSON Pointer uses ~1 as an escape character for /
-                    _visitor.CurrentKeys.Path = null;
+                    continue;
                 }
+
+                _visitor.CurrentKeys.Path = pathItem.Key;
+                WalkItem(pathItem.Key, pathItem.Value, Walk, isComponent: false);// JSON Pointer uses ~1 as an escape character for /
+                _visitor.CurrentKeys.Path = null;
             }
         }
 
@@ -206,14 +241,16 @@ namespace Microsoft.OpenApi
             _visitor.Visit(webhooks);
 
             // Visit Webhooks
-            if (webhooks != null)
+            foreach (var pathItem in webhooks)
             {
-                foreach (var pathItem in webhooks)
+                if (pathItem.Value is null)
                 {
-                    _visitor.CurrentKeys.Path = pathItem.Key;
-                    WalkItem(pathItem.Key, pathItem.Value, Walk, isComponent: false);// JSON Pointer uses ~1 as an escape character for /
-                    _visitor.CurrentKeys.Path = null;
+                    continue;
                 }
+
+                _visitor.CurrentKeys.Path = pathItem.Key;
+                WalkItem(pathItem.Key, pathItem.Value, Walk, isComponent: false);// JSON Pointer uses ~1 as an escape character for /
+                _visitor.CurrentKeys.Path = null;
             }
         }
 
@@ -230,12 +267,14 @@ namespace Microsoft.OpenApi
             _visitor.Visit(servers);
 
             // Visit Servers
-            if (servers != null)
+            for (var i = 0; i < servers.Count; i++)
             {
-                for (var i = 0; i < servers.Count; i++)
+                if (servers[i] is not { } server)
                 {
-                    WalkItem(i.ToString(), servers[i], Walk);
+                    continue;
                 }
+
+                WalkItem(i.ToString(), server, Walk);
             }
         }
 
@@ -250,11 +289,17 @@ namespace Microsoft.OpenApi
             }
 
             _visitor.Visit(info);
-            if (info != null)
+
+            if (info.Contact is { } contact)
             {
-                WalkItem(OpenApiConstants.Contact, info.Contact, Walk);
-                WalkItem(OpenApiConstants.License, info.License, Walk);
+                WalkItem(OpenApiConstants.Contact, contact, Walk);
             }
+
+            if (info.License is { } license)
+            {
+                WalkItem(OpenApiConstants.License, license, Walk);
+            }
+
             Walk(info as IOpenApiExtensible);
         }
 
@@ -274,6 +319,11 @@ namespace Microsoft.OpenApi
             {
                 foreach (var item in openApiExtensible.Extensions)
                 {
+                    if (item.Value == null)
+                    {
+                        continue;
+                    }
+
                     _visitor.CurrentKeys.Extension = item.Key;
                     WalkItem(item.Key, item.Value, Walk);
                     _visitor.CurrentKeys.Extension = null;
@@ -342,11 +392,15 @@ namespace Microsoft.OpenApi
             {
                 foreach (var item in callback.PathItems)
                 {
+                    if (item.Value is null)
+                    {
+                        continue;
+                    }
+
                     var context = item.Key.ToString();
 
                     _visitor.CurrentKeys.Callback = context;
-                    var pathItem = item.Value;
-                    WalkItem(context, pathItem, Walk);
+                    WalkItem(context, item.Value, Walk);
                     _visitor.CurrentKeys.Callback = null;
                 }
             }
@@ -363,9 +417,9 @@ namespace Microsoft.OpenApi
             }
 
             _visitor.Visit(tag);
-            if (tag.ExternalDocs != null)
+            if (tag.ExternalDocs is { } externalDocs)
             {
-                _visitor.Visit(tag.ExternalDocs);
+                _visitor.Visit(externalDocs);
             }
             _visitor.Visit(tag as IOpenApiExtensible);
         }
@@ -375,11 +429,6 @@ namespace Microsoft.OpenApi
         /// </summary>
         internal void Walk(OpenApiTagReference tag)
         {
-            if (tag == null)
-            {
-                return;
-            }
-
             if (tag is IOpenApiReferenceHolder openApiReferenceHolder)
             {
                 Walk(openApiReferenceHolder);
@@ -397,7 +446,12 @@ namespace Microsoft.OpenApi
             }
 
             _visitor.Visit(server);
-            WalkItem(OpenApiConstants.Variables, server.Variables, Walk);
+
+            if (server.Variables is { } variables)
+            {
+                WalkItem(OpenApiConstants.Variables, variables, Walk);
+            }
+
             _visitor.Visit(server as IOpenApiExtensible);
         }
 
@@ -413,14 +467,16 @@ namespace Microsoft.OpenApi
 
             _visitor.Visit(serverVariables);
 
-            if (serverVariables != null)
+            foreach (var variable in serverVariables)
             {
-                foreach (var variable in serverVariables)
+                if (variable.Value == null)
                 {
-                    _visitor.CurrentKeys.ServerVariable = variable.Key;
-                    WalkItem(variable.Key, variable.Value, Walk);
-                    _visitor.CurrentKeys.ServerVariable = null;
+                    continue;
                 }
+
+                _visitor.CurrentKeys.ServerVariable = variable.Key;
+                WalkItem(variable.Key, variable.Value, Walk);
+                _visitor.CurrentKeys.ServerVariable = null;
             }
         }
 
@@ -467,7 +523,11 @@ namespace Microsoft.OpenApi
 
             if (pathItem != null)
             {
-                WalkItem(OpenApiConstants.Parameters, pathItem.Parameters, Walk);
+                if (pathItem.Parameters is { } parameters)
+                {
+                    WalkItem(OpenApiConstants.Parameters, parameters, Walk);
+                }
+
                 Walk(pathItem.Operations);
             }
 
@@ -489,14 +549,17 @@ namespace Microsoft.OpenApi
             }
 
             _visitor.Visit(operations);
-            if (operations != null)
+
+            foreach (var operation in operations)
             {
-                foreach (var operation in operations)
+                if (operation.Value is null)
                 {
-                    _visitor.CurrentKeys.Operation = operation.Key;
-                    WalkItem(operation.Key.Method.ToLowerInvariant(), operation.Value, Walk);
-                    _visitor.CurrentKeys.Operation = null;
+                    continue;
                 }
+
+                _visitor.CurrentKeys.Operation = operation.Key;
+                WalkItem(operation.Key.Method.ToLowerInvariant(), operation.Value, Walk);
+                _visitor.CurrentKeys.Operation = null;
             }
         }
 
@@ -513,12 +576,30 @@ namespace Microsoft.OpenApi
 
             _visitor.Visit(operation);
 
-            WalkItem(OpenApiConstants.Parameters, operation.Parameters, Walk);
+            if (operation.Parameters is { } parameters)
+            {
+                WalkItem(OpenApiConstants.Parameters, parameters, Walk);
+            }
+
             Walk(OpenApiConstants.RequestBody, () => Walk(operation.RequestBody));
-            WalkItem(OpenApiConstants.Responses, operation.Responses, Walk);
+
+            if (operation.Responses is { } responses)
+            {
+                WalkItem(OpenApiConstants.Responses, responses, Walk);
+            }
+
             WalkDictionary(OpenApiConstants.Callbacks, operation.Callbacks, Walk);
-            WalkItem(OpenApiConstants.Tags, operation.Tags, Walk);
-            WalkItem(OpenApiConstants.Security, operation.Security, Walk);
+
+            if (operation.Tags is { } tags)
+            {
+                WalkItem(OpenApiConstants.Tags, tags, Walk);
+            }
+
+            if (operation.Security is { } security)
+            {
+                WalkItem(OpenApiConstants.Security, security, Walk);
+            }
+
             Walk(operation as IOpenApiExtensible);
         }
 
@@ -534,12 +615,14 @@ namespace Microsoft.OpenApi
 
             _visitor.Visit(securityRequirements);
 
-            if (securityRequirements != null)
+            for (var i = 0; i < securityRequirements.Count; i++)
             {
-                for (var i = 0; i < securityRequirements.Count; i++)
+                if (securityRequirements[i] is not { } requirement)
                 {
-                    WalkItem(i.ToString(), securityRequirements[i], Walk);
+                    continue;
                 }
+
+                WalkItem(i.ToString(), requirement, Walk);
             }
         }
 
@@ -555,12 +638,14 @@ namespace Microsoft.OpenApi
 
             _visitor.Visit(parameters);
 
-            if (parameters != null)
+            for (var i = 0; i < parameters.Count; i++)
             {
-                for (var i = 0; i < parameters.Count; i++)
+                if (parameters[i] is not { } parameter)
                 {
-                    WalkItem(i.ToString(), parameters[i], Walk);
+                    continue;
                 }
+
+                WalkItem(i.ToString(), parameter, Walk);
             }
         }
 
@@ -581,9 +666,18 @@ namespace Microsoft.OpenApi
             }
 
             _visitor.Visit(parameter);
-            WalkItem(OpenApiConstants.Schema, parameter.Schema, Walk, isComponent: false);
-            WalkItem(OpenApiConstants.Content, parameter.Content, Walk);
-            WalkDictionary(OpenApiConstants.Examples, parameter.Examples , Walk);
+
+            if (parameter.Schema is { } schema)
+            {
+                WalkItem(OpenApiConstants.Schema, schema, Walk, isComponent: false);
+            }
+
+            if (parameter.Content is { } content)
+            {
+                WalkItem(OpenApiConstants.Content, content, Walk);
+            }
+
+            WalkDictionary(OpenApiConstants.Examples, parameter.Examples, Walk);
 
             Walk(parameter as IOpenApiExtensible);
         }
@@ -600,15 +694,18 @@ namespace Microsoft.OpenApi
 
             _visitor.Visit(responses);
 
-            if (responses != null)
+            foreach (var response in responses)
             {
-                foreach (var response in responses)
+                if (response.Value is null)
                 {
-                    _visitor.CurrentKeys.Response = response.Key;
-                    WalkItem(response.Key, response.Value, Walk, isComponent: false);
-                    _visitor.CurrentKeys.Response = null;
+                    continue;
                 }
+
+                _visitor.CurrentKeys.Response = response.Key;
+                WalkItem(response.Key, response.Value, Walk, isComponent: false);
+                _visitor.CurrentKeys.Response = null;
             }
+
             Walk(responses as IOpenApiExtensible);
         }
 
@@ -629,7 +726,12 @@ namespace Microsoft.OpenApi
             }
 
             _visitor.Visit(response);
-            WalkItem(OpenApiConstants.Content, response.Content, Walk);
+
+            if (response.Content is { } content)
+            {
+                WalkItem(OpenApiConstants.Content, content, Walk);
+            }
+
             WalkDictionary(OpenApiConstants.Links, response.Links, Walk);
             WalkDictionary(OpenApiConstants.Headers, response.Headers, Walk);
             Walk(response as IOpenApiExtensible);
@@ -653,10 +755,11 @@ namespace Microsoft.OpenApi
 
             _visitor.Visit(requestBody);
 
-            if (requestBody is {Content: not null})
+            if (requestBody.Content is { } content)
             {
-                WalkItem(OpenApiConstants.Content, requestBody.Content, Walk);
+                WalkItem(OpenApiConstants.Content, content, Walk);
             }
+
             Walk(requestBody as IOpenApiExtensible);
         }
 
@@ -671,14 +774,17 @@ namespace Microsoft.OpenApi
             }
 
             _visitor.Visit(headers);
-            if (headers != null)
+
+            foreach (var header in headers)
             {
-                foreach (var header in headers)
+                if (header.Value is null)
                 {
-                    _visitor.CurrentKeys.Header = header.Key;
-                    WalkItem(header.Key, header.Value, Walk, isComponent: false);
-                    _visitor.CurrentKeys.Header = null;
+                    continue;
                 }
+
+                _visitor.CurrentKeys.Header = header.Key;
+                WalkItem(header.Key, header.Value, Walk, isComponent: false);
+                _visitor.CurrentKeys.Header = null;
             }
         }
 
@@ -693,14 +799,17 @@ namespace Microsoft.OpenApi
             }
 
             _visitor.Visit(callbacks);
-            if (callbacks != null)
+
+            foreach (var callback in callbacks)
             {
-                foreach (var callback in callbacks)
+                if (callback.Value is null)
                 {
-                    _visitor.CurrentKeys.Callback = callback.Key;
-                    WalkItem(callback.Key, callback.Value, Walk, isComponent: false);
-                    _visitor.CurrentKeys.Callback = null;
+                    continue;
                 }
+
+                _visitor.CurrentKeys.Callback = callback.Key;
+                WalkItem(callback.Key, callback.Value, Walk, isComponent: false);
+                _visitor.CurrentKeys.Callback = null;
             }
         }
 
@@ -715,14 +824,17 @@ namespace Microsoft.OpenApi
             }
 
             _visitor.Visit(content);
-            if (content != null)
+
+            foreach (var mediaType in content)
             {
-                foreach (var mediaType in content)
+                if (mediaType.Value is null)
                 {
-                    _visitor.CurrentKeys.Content = mediaType.Key;
-                    WalkItem(mediaType.Key, mediaType.Value, Walk);
-                    _visitor.CurrentKeys.Content = null;
+                    continue;
                 }
+
+                _visitor.CurrentKeys.Content = mediaType.Key;
+                WalkItem(mediaType.Key, mediaType.Value, Walk);
+                _visitor.CurrentKeys.Content = null;
             }
         }
 
@@ -739,8 +851,17 @@ namespace Microsoft.OpenApi
             _visitor.Visit(mediaType);
 
             WalkDictionary(OpenApiConstants.Example, mediaType.Examples, Walk);
-            WalkItem(OpenApiConstants.Schema, mediaType.Schema, Walk, isComponent: false);
-            WalkItem(OpenApiConstants.Encoding, mediaType.Encoding, Walk);
+
+            if (mediaType.Schema is { } schema)
+            {
+                WalkItem(OpenApiConstants.Schema, schema, Walk, isComponent: false);
+            }
+
+            if (mediaType.Encoding is { } encoding)
+            {
+                WalkItem(OpenApiConstants.Encoding, encoding, Walk);
+            }
+
             Walk(mediaType as IOpenApiExtensible);
         }
 
@@ -756,14 +877,16 @@ namespace Microsoft.OpenApi
 
             _visitor.Visit(encodings);
 
-            if (encodings != null)
+            foreach (var item in encodings)
             {
-                foreach (var item in encodings)
+                if (item.Value is null)
                 {
-                    _visitor.CurrentKeys.Encoding = item.Key;
-                    WalkItem(item.Key, item.Value, Walk);
-                    _visitor.CurrentKeys.Encoding = null;
+                    continue;
                 }
+
+                _visitor.CurrentKeys.Encoding = item.Key;
+                WalkItem(item.Key, item.Value, Walk);
+                _visitor.CurrentKeys.Encoding = null;
             }
         }
 
@@ -779,10 +902,11 @@ namespace Microsoft.OpenApi
 
             _visitor.Visit(encoding);
 
-            if (encoding.Headers != null)
+            if (encoding.Headers is { } headers)
             {
-                Walk(encoding.Headers);
+                Walk(headers);
             }
+
             Walk(encoding as IOpenApiExtensible);
         }
 
@@ -807,44 +931,50 @@ namespace Microsoft.OpenApi
 
             _visitor.Visit(schema);
 
-            if (schema.Items != null)
+            if (schema.Items is { } items)
             {
-                WalkItem("items", schema.Items, Walk, isComponent: false);
+                WalkItem("items", items, Walk, isComponent: false);
             }
 
-            if (schema.Not != null)
+            if (schema.Not is { } not)
             {
-                WalkItem("not", schema.Not, Walk, isComponent: false);
+                WalkItem("not", not, Walk, isComponent: false);
             }
 
-            if (schema.AllOf != null)
+            if (schema.AllOf is { Count: > 0 } allOf)
             {
-                WalkItem("allOf", schema.AllOf, Walk);
+                WalkItem("allOf", allOf, Walk);
             }
 
-            if (schema.AnyOf != null)
+            if (schema.AnyOf is { Count: > 0 } anyOf)
             {
-                WalkItem("anyOf", schema.AnyOf, Walk);
+                WalkItem("anyOf", anyOf, Walk);
             }
 
-            if (schema.OneOf != null)
+            if (schema.OneOf is { Count: > 0 } oneOf)
             {
-                WalkItem("oneOf", schema.OneOf, Walk);
+                WalkItem("oneOf", oneOf, Walk);
             }
 
-            if (schema.Properties != null)
+            if (schema.Properties is { } properties)
             {
-                WalkDictionary("properties", schema.Properties, Walk);
+                WalkDictionary("properties", properties, Walk);
             }
 
-            if (schema.AdditionalProperties != null)
+            if (schema.AdditionalProperties is { } additionalProperties)
             {
-                WalkItem("additionalProperties", schema.AdditionalProperties, Walk, isComponent: false);
+                WalkItem("additionalProperties", additionalProperties, Walk, isComponent: false);
             }
 
-            WalkItem("discriminator", schema.Discriminator, Walk);
+            if (schema.Discriminator is { } discriminator)
+            {
+                WalkItem("discriminator", discriminator, Walk);
+            }
 
-            WalkItem(OpenApiConstants.ExternalDocs, schema.ExternalDocs, Walk);
+            if (schema.ExternalDocs is { } externalDocs)
+            {
+                WalkItem(OpenApiConstants.ExternalDocs, externalDocs, Walk);
+            }
 
             Walk(schema as IOpenApiExtensible);
 
@@ -860,9 +990,9 @@ namespace Microsoft.OpenApi
 
             _visitor.Visit(openApiDiscriminator);
 
-            if (openApiDiscriminator.Mapping != null)
+            if (openApiDiscriminator.Mapping is { Count: > 0 } mapping)
             {
-                WalkDictionary("mapping", openApiDiscriminator.Mapping, (item, _) => Walk((IOpenApiSchema)item));
+                WalkDictionary("mapping", mapping, (item, _) => Walk((IOpenApiSchema)item));
             }
         }
 
@@ -878,14 +1008,16 @@ namespace Microsoft.OpenApi
 
             _visitor.Visit(examples);
 
-            if (examples != null)
+            foreach (var example in examples)
             {
-                foreach (var example in examples)
+                if (example.Value is null)
                 {
-                    _visitor.CurrentKeys.Example = example.Key;
-                    WalkItem(example.Key, example.Value, Walk, isComponent: false);
-                    _visitor.CurrentKeys.Example = null;
+                    continue;
                 }
+
+                _visitor.CurrentKeys.Example = example.Key;
+                WalkItem(example.Key, example.Value, Walk, isComponent: false);
+                _visitor.CurrentKeys.Example = null;
             }
         }
 
@@ -935,12 +1067,14 @@ namespace Microsoft.OpenApi
             _visitor.Visit(examples);
 
             // Visit Examples
-            if (examples != null)
+            for (var i = 0; i < examples.Count; i++)
             {
-                for (var i = 0; i < examples.Count; i++)
+                if (examples[i] is not { } example)
                 {
-                    WalkItem(i.ToString(), examples[i], Walk, isComponent: false);
+                    continue;
                 }
+
+                WalkItem(i.ToString(), example, Walk, isComponent: false);
             }
         }
 
@@ -955,12 +1089,14 @@ namespace Microsoft.OpenApi
             }
 
             // Visit Schemas
-            if (schemas != null)
+            for (var i = 0; i < schemas.Count; i++)
             {
-                for (var i = 0; i < schemas.Count; i++)
+                if (schemas[i] is not { } schema)
                 {
-                    WalkItem(i.ToString(), schemas[i], Walk, isComponent: false);
+                    continue;
                 }
+
+                WalkItem(i.ToString(), schema, Walk, isComponent: false);
             }
         }
 
@@ -1003,14 +1139,16 @@ namespace Microsoft.OpenApi
 
             _visitor.Visit(links);
 
-            if (links != null)
+            foreach (var item in links)
             {
-                foreach (var item in links)
+                if (item.Value is null)
                 {
-                    _visitor.CurrentKeys.Link = item.Key;
-                    WalkItem(item.Key, item.Value, Walk, isComponent: false);
-                    _visitor.CurrentKeys.Link = null;
+                    continue;
                 }
+
+                _visitor.CurrentKeys.Link = item.Key;
+                WalkItem(item.Key, item.Value, Walk, isComponent: false);
+                _visitor.CurrentKeys.Link = null;
             }
         }
 
@@ -1031,7 +1169,12 @@ namespace Microsoft.OpenApi
             }
 
             _visitor.Visit(link);
-            WalkItem(OpenApiConstants.Server, link.Server, Walk);
+
+            if (link.Server is { } server)
+            {
+                WalkItem(OpenApiConstants.Server, server, Walk);
+            }
+
             Walk(link as IOpenApiExtensible);
         }
 
@@ -1052,10 +1195,24 @@ namespace Microsoft.OpenApi
             }
 
             _visitor.Visit(header);
-            WalkItem(OpenApiConstants.Content, header.Content, Walk);
-            WalkItem(OpenApiConstants.Example, header.Example, Walk);
-            WalkDictionary<IOpenApiExample>(OpenApiConstants.Examples, header.Examples, Walk);
-            WalkItem(OpenApiConstants.Schema, header.Schema, Walk, false);
+
+            if (header.Content is { } content)
+            {
+                WalkItem(OpenApiConstants.Content, content, Walk);
+            }
+
+            if (header.Example is { } example)
+            {
+                WalkItem(OpenApiConstants.Example, example, Walk);
+            }
+
+            WalkDictionary(OpenApiConstants.Examples, header.Examples, Walk);
+
+            if (header.Schema is { } schema)
+            {
+                WalkItem(OpenApiConstants.Schema, schema, Walk, isComponent: false);
+            }
+
             Walk(header as IOpenApiExtensible);
         }
 
